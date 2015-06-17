@@ -8,14 +8,10 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-	// Arquivo
 	ofstream saida;
 
-    // Criar arquivo com acesso binario
 	saida.open("mandelbrot.ppm", ios::binary | ios::out);
 
-
-    // Tamanho da imagem
     const int altura    = 1024;
     const int largura   = 1024;
 
@@ -23,12 +19,11 @@ int main(int argc, char* argv[])
 
 	sprintf(header, "P6\n%d\n%d\n255\n", largura, altura);
 
-	// escrever header no arquivo de saida
 	saida.write(header, strlen(header));
 
     delete header;
 
-    // Variaveis Mandelbrot
+    // Mandelbrot
     int iY, iX;
     double Cx, Cy;
     const double CxMin  =   -2.5;
@@ -47,7 +42,9 @@ int main(int argc, char* argv[])
     /* bail-out value , radius of circle ;  */
     const double EscapeRadius=2;
     double ER2=EscapeRadius*EscapeRadius;
-    char color[3];
+    // buffer for all pixels, removing write overhead each iteration
+    char * color = new char[altura*largura*3];
+    int iTamanho = 0;
 
     for(iY=0;iY<altura;iY++)
     {
@@ -72,21 +69,24 @@ int main(int argc, char* argv[])
                 /* compute  pixel color (24 bit = 3 bytes) */
                 if (Iteration==IterationMax)
                 { /*  interior of Mandelbrot set = black */
-                    color[0]=0;
-                    color[1]=0;
-                    color[2]=0;
+                    color[iTamanho    ]=0;
+                    color[iTamanho + 1]=0;
+                    color[iTamanho + 2]=0;
+                    iTamanho += 3;
                 }
                 else
                 { /* exterior of Mandelbrot set = white */
-                    color[0]=((IterationMax-Iteration) % 8) *  63;  /* Red */
-                    color[1]=((IterationMax-Iteration) % 4) * 127;  /* Green */
-                    color[2]=((IterationMax-Iteration) % 2) * 255;  /* Blue */
+                    color[iTamanho    ]=((IterationMax-Iteration) % 8) *  63;  /* Red */
+                    color[iTamanho + 1]=((IterationMax-Iteration) % 4) * 127;  /* Green */
+                    color[iTamanho + 2]=((IterationMax-Iteration) % 2) * 255;  /* Blue */
+                    iTamanho += 3;
                 };
-                /*write color to the file*/
-                saida.write(color, 3);
+
             }
     }
 
+    /*write color to the file*/
+    saida.write(color, altura*largura*3);
 	saida.close();
 
 	return 0;
