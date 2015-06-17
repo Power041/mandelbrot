@@ -1,3 +1,5 @@
+// Mandelbrot implementado numa funcao
+
 #include <cstring>
 #include <iostream>
 #include <fstream>
