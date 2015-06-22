@@ -31,7 +31,7 @@
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
-			<Add option="-fexceptions" />
+			<Add option="-fexceptions -mmmx -msse -msse2" />
 		</Compiler>
 		<Unit filename="main.cpp" />
 		<Extensions>
