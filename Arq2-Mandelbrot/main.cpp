@@ -151,46 +151,40 @@ void mandelbrot(char * buf, int X, int Y)
 		movups xmm0, [esi]
 		mov esi, ptrZy		// esi = ptrZy
 		movups xmm1, [esi]
-		mov esi, ptrCy		// esi = ptrCy
-		movups xmm2, [esi]
-		mov esi, ptrCx		// esi = ptrCx
-		movups xmm3, [esi]
 		mov esi, ptrDois	// esi = ptrDois
+		movups xmm2, [esi]
+		mov esi, ptrZx2	// esi = ptrZx2
+		movups xmm3, [esi]
+		mov esi, ptrZy2	// esi = ptrZy2
 		movups xmm4, [esi]
-		mov esi, ptrZx2		// esi = ptrZx2
-		movups xmm5, [esi]
-		mov esi, ptrZy2		// esi = ptrZy2
-		movups xmm6, [esi]
-		mov esi, ptrER2		// esi = ptrER2
-		movups xmm7, [esi]
 		/*
 		xmm0 = Zx
 		xmm1 = Zy
-		xmm2 = Cy
-		xmm3 = Cx
-		xmm4 = [2, 2, 2, 2]
-		xmm5 = Zx2
-		xmm6 = Zy2
-		xmm7 = ER2
+		xmm2 = [2, 2, 2, 2]
+		xmm3 = Zx2
+		xmm4 = Zy2
 		*/
 		// Zy = 2 * Zx * Zy + Cy;
 		mulps xmm1, xmm0	// xmm1 = Zx*Zy
-		mulps xmm1, xmm4	// xmm1 = 2*Zx*Zy
-		addps xmm1, xmm2	// xmm1 = 2*Zx*Zy + Cy
+		mulps xmm1, xmm2	// xmm1 = 2*Zx*Zy
+		mov esi, ptrCy
+		addps xmm1, XMMWORD PTR [esi]	// xmm1 = 2*Zx*Zy + Cy
 		// Zx = Zx2 - Zy2 + Cx;
-		movaps xmm0, xmm5	// xmm0 = Zx2
-		subps xmm0, xmm6	// xmm0 = Zx2 - Zy2
-		addps xmm0, xmm3	// xmm0 = Zx2 - Zy2 + Cx
+		movaps xmm0, xmm3	// xmm0 = Zx2
+		subps xmm0, xmm4	// xmm0 = Zx2 - Zy2
+		mov esi, ptrCx
+		addps xmm0, XMMWORD PTR [esi]	// xmm0 = Zx2 - Zy2 + Cx
 		// Zx2 = Zx * Zx;
-		movaps xmm5, xmm0	 // xmm5 = Zx
-		mulps xmm5, xmm0	// xmm5 = Zx*Zx
+		movaps xmm3, xmm0	// xmm3 = Zx
+		mulps xmm3, xmm0	// xmm3= Zx*Zx
 		// Zy2 = Zy * Zy;
-		movaps xmm6, xmm1	// xmm6 = Zy
-		mulps xmm6, xmm1	// xmm6 = Zy*Zy
+		movaps xmm4, xmm1	// xmm4 = Zy
+		mulps xmm4, xmm1	// xmm4 = Zy*Zy
 		// Zx2 + Zy2 < ER2;
-		movaps xmm8, xmm6	// xmm8 = Zy2
-		addps xmm8, xmm5	// xmm8 = Zy2 + Zx2
-		cmpltps xmm8, xmm7	// parallel less than xmm8, xmm7 -> xmm8 < xmm7 -> xmm8 = results
+		movaps xmm5, xmm4	// xmm5 = Zy2
+		addps xmm5, xmm3	// xmm5 = Zy2 + Zx2
+		mov esi, ptrER2
+		cmpltps xmm5, XMMWORD PTR [esi]	// parallel less than xmm5, ER2-> xmm5 < ER2 -> xmm6 = results
 
 	}
 	//                Zy = 2 * Zx * Zy + Cy;
