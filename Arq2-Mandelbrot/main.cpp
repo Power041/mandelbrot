@@ -139,8 +139,6 @@ void mandelbrot(char * buf, int X, int Y)
 	ptrResultados = resultados;
 	ptrResultadoIteration = resultadoIteration;
 
-	int cntY, cntX;
-
 	//    for (cntY = 0; cntY < 4; cntY++)
 	//    {
 	//        Cy = CyMin + (4*Y + cntY) * PixelHeight;
@@ -288,7 +286,7 @@ void mandelbrot(char * buf, int X, int Y)
 		movd [esi], xmm5
 
 		mov esi, ptrIterationMax
-		mov xmm0, [esi]
+		movups xmm0, [esi]
 
 		// parallel (IterationMax - Iteration)
 		subps xmm0, xmm6
@@ -363,7 +361,7 @@ void mandelbrot(char * buf, int X, int Y)
 		add edi, 4
 
 		cmp eax, 0	// eax == 0 -> Iteration != IterationMax
-		jne pre-igual
+		jne preigual
 		push edi
 		mov edi, ptrResultadoIteration
 		// we need to get the element on resultadoIteration
@@ -375,7 +373,7 @@ void mandelbrot(char * buf, int X, int Y)
 		mov eax, [edi]
 		cdq
 		mov ebx, 8
-		div
+		div ebx
 		mov ebx, 63
 		mul ebx
 		mov BYTE PTR [esi], al
@@ -384,7 +382,7 @@ void mandelbrot(char * buf, int X, int Y)
 		mov eax, [edi]
 		cdq
 		mov ebx, 4
-		div
+		div ebx
 		mov ebx, 127
 		mul ebx
 		mov BYTE PTR [esi], al
@@ -393,10 +391,23 @@ void mandelbrot(char * buf, int X, int Y)
 		mov eax, [edi]
 		cdq
 		mov ebx, 2
-		div
+		div ebx
 		mov ebx, 255
 		mul ebx
 		mov BYTE PTR [esi], al
+
+		pop edi
+
+		// loop write
+		dec ecx
+		cmp ecx, 0
+		ja write
+		
+		pop ecx
+		// loop outer
+		dec ecx
+		cmp ecx, 0
+		ja outer
 
 		//else
 		//{ /* exterior of Mandelbrot set = white */
@@ -405,7 +416,7 @@ void mandelbrot(char * buf, int X, int Y)
 		//	buf[3*(4*Y+cntY)*largura + 3*(4*X+cntX) + 2] = ((IterationMax - Iteration) % 2) * 255;  /* Blue */
 		//}
 
-	pre-igual:
+	preigual:
 		push ecx
 		mov ecx, 3
 	igual:
@@ -418,6 +429,12 @@ void mandelbrot(char * buf, int X, int Y)
 		mov BYTE PTR [esi], 0
 		inc esi
 		loop igual
+
+		pop ecx
+		// loop write
+		dec ecx
+		cmp ecx, 0
+		ja write
 
 		pop ecx
 
