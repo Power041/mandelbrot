@@ -7,6 +7,8 @@
 
 #define zero {0.0, 0.0, 0.0, 0.0}
 
+#define iterMax	256
+#define iterMaxf	256.0
 
 using namespace std;
 
@@ -37,6 +39,8 @@ int main(int argc, char* argv[])
 	// buffer for all pixels, removing write overhead each iteration
 	char * color = new char[altura*largura * 3];
 
+	mandelbrot(color, 0x200, 0);
+
 	for (iY = 0; iY<altura / 4; iY++)
 	{
 		for (iX = 0; iX<largura / 4; iX++)
@@ -62,7 +66,6 @@ void mandelbrot(char * buf, int X, int Y)
 	/* */
 	float PixelWidth = (CxMax - CxMin) / (float)largura;
 	float PixelHeight = (CyMax - CyMin) / (float)altura;
-
 
 	float tmp = CyMin + 4 * Y*PixelHeight;
 	float Cy[4] = { tmp, tmp, tmp, tmp };
@@ -99,8 +102,6 @@ void mandelbrot(char * buf, int X, int Y)
 		pop edi
 	}
 
-
-
 	/* Z=Zx+Zy*i  ;   Z0 = 0 */
 	float Zx[4] = zero, Zy[4] = zero;
 	float Zx2[4] = zero, Zy2[4] = zero; /* Zx2=Zx*Zx;  Zy2=Zy*Zy  */
@@ -108,11 +109,11 @@ void mandelbrot(char * buf, int X, int Y)
 	float um[4] = { 1.0, 1.0, 1.0, 1.0 };
 	/*  */
 	float Iteration[4] = zero;
-	float IterationMax[4] = { 256.0, 256.0, 256.0, 256.0 };
+	float IterationMax[4] = { iterMaxf, iterMaxf, iterMaxf, iterMaxf };
+
 
 	float * ptrZx = NULL, *ptrZy = NULL, *ptrZx2 = NULL, *ptrZy2 = NULL, *ptrDois = NULL;
 	float * ptrUm = NULL, *ptrIteration = NULL, *ptrIterationMax = NULL;
-
 
 	ptrZx = Zx;
 	ptrZy = Zy;
@@ -139,38 +140,12 @@ void mandelbrot(char * buf, int X, int Y)
 	ptrResultados = resultados;
 	ptrResultadoIteration = resultadoIteration;
 
-	//    for (cntY = 0; cntY < 4; cntY++)
-	//    {
-	//        Cy = CyMin + (4*Y + cntY) * PixelHeight;
-	//        if (fabs(Cy) < PixelHeight/2) Cy = 0.0; /* Main antenna */
-	//        for (cntX = 0; cntX < 4; cntX++)
-	//        {
-	//            Cx = CxMin + (4*X + cntX) * PixelWidth;
-	//            /* initial value of orbit = critical point Z= 0 */
-	//
-	//            // zerar Zx
-	//            Zx = 0.0;
-	//            Zy = 0.0;
-	//            Zx2 = Zx * Zx;
-	//            Zy2 = Zy * Zy;
-	//            /* */
-	//            for (Iteration = 0; Iteration < IterationMax && ((Zx2 + Zy2) < ER2); Iteration++)
-	//            {
+	int outerLoop = 4, writeLoop = 4;
+
 	__asm{
 		push esi
 		push edi
 
-		mov esi, ptrZx		// esi = ptrZx
-		movups xmm0, [esi]
-		mov esi, ptrZy		// esi = ptrZy
-		movups xmm1, [esi]
-
-		mov esi, ptrZx2	// esi = ptrZx2
-		movups xmm3, [esi]
-		mov esi, ptrZy2	// esi = ptrZy2
-		movups xmm4, [esi]
-		mov esi, ptrIteration
-		movups xmm6, [esi]
 		/*
 		xmm0 = Zx
 		xmm1 = Zy
@@ -180,7 +155,7 @@ void mandelbrot(char * buf, int X, int Y)
 		xmm6 = Iteration
 		*/
 		// outer loop
-		mov ecx, 4
+		mov outerLoop, 4
 	outer:
 		mov esi, ptrCy
 		movups xmm0, [esi]
@@ -189,11 +164,23 @@ void mandelbrot(char * buf, int X, int Y)
 		addps xmm0, xmm1
 		mov esi, ptrCy
 		movups [esi], xmm0
-		// xmm7 = Cy
-		movaps xmm7, xmm0
 
 		// if (fabs(Cy) < PixelHeight / 2) Cy = 0.0; /* Main antenna */
-
+		finit 
+		fld Cy
+		fabs
+		fld PixelHeight
+		fld dois
+		fdiv
+		fcomip ST(0), ST(1)
+		ja zerarCy
+		ffree ST(0)
+		// xmm7 = Cy
+		movaps xmm7, xmm0
+		jmp zerar
+	zerarCy:
+		xorps xmm7, xmm7		
+	zerar:
 		// zerar Zx
 		// Zx = 0.0;
 		// Zy = 0.0;
@@ -205,31 +192,47 @@ void mandelbrot(char * buf, int X, int Y)
 		xorps xmm4, xmm4
 		xorps xmm6, xmm6
 
+		xorps xmm5, xmm5
+		cmpeqps xmm5, xmm0
+
 		// Iteration loop
-		push ecx
-		mov ecx, 256
+		mov ecx, iterMax
 	iter:
 		// Zy = 2 * Zx * Zy + Cy;
 		mov esi, ptrDois
 		movups xmm2, [esi]
+		
+		andps xmm0, xmm5
 		mulps xmm1, xmm0	// xmm1 = Zx*Zy
+
+		andps xmm2, xmm5
 		mulps xmm1, xmm2	// xmm1 = 2*Zx*Zy
+
 		movups xmm2, xmm7
+		andps xmm2, xmm5
 		addps xmm1, xmm2	// xmm1 = 2*Zx*Zy + Cy
 
 		// Zx = Zx2 - Zy2 + Cx;
 		movaps xmm0, xmm3	// xmm0 = Zx2
+
+		andps xmm4, xmm5
 		subps xmm0, xmm4	// xmm0 = Zx2 - Zy2
 		mov esi, ptrCx
 		movups xmm2, [esi]
+
+		andps xmm2, xmm5
 		addps xmm0, xmm2	// xmm0 = Zx2 - Zy2 + Cx
 
 		// Zx2 = Zx * Zx;
 		movaps xmm3, xmm0	// xmm3 = Zx
+
+		andps xmm0, xmm5
 		mulps xmm3, xmm0	// xmm3= Zx*Zx
 
 		// Zy2 = Zy * Zy;
 		movaps xmm4, xmm1	// xmm4 = Zy
+
+		andps xmm1, xmm5
 		mulps xmm4, xmm1	// xmm4 = Zy*Zy
 
 		// Zx2 + Zy2 < ER2;
@@ -238,15 +241,13 @@ void mandelbrot(char * buf, int X, int Y)
 		addps xmm5, xmm3	// xmm5 = Zy2 + Zx2
 		mov esi, ptrER2
 		movups xmm2, [esi]
-		cmpnltps xmm5, xmm2	// parallel not less than xmm5, ER2-> xmm5 < ER2 -> xmm6 = results (mask 1 = not less)
+		cmpltps xmm5, xmm2	// parallel not less than xmm5, ER2-> xmm5 < ER2 -> xmm6 = results (mask 1 = not less)
 		mov esi, ptrUm
 		movups xmm2, [esi]
-		andps xmm5, xmm2	// xmm5 & xmm2 = chooses which of the 4 floats will be incremented or not
-		addps xmm6, xmm5	// Iteration has some parts of the vector rising and others static
+		andps xmm2, xmm5	// xmm5 & xmm2 = chooses which of the 4 floats will be incremented or not
+		addps xmm6, xmm2	// Iteration has some parts of the vector rising and others static
 		loop iter
 
-		// outer counter
-		pop ecx
 
 		mov esi, ptrIterationMax
 		movups xmm5, [esi] // xmm5 = IterationMax
@@ -291,6 +292,10 @@ void mandelbrot(char * buf, int X, int Y)
 		// parallel (IterationMax - Iteration)
 		subps xmm0, xmm6
 
+		movaps xmm1, xmm0
+		movaps xmm3, xmm0
+		movaps xmm5, xmm0
+
 		punpckldq xmm0, xmm0 
 		punpckldq xmm0, xmm0 
 
@@ -303,29 +308,26 @@ void mandelbrot(char * buf, int X, int Y)
 		punpckhdq xmm5, xmm5 
 		punpckhdq xmm5, xmm5
 
+		cvtps2pi mm0, xmm0
+		cvtps2pi mm1, xmm1
+		cvtps2pi mm2, xmm3
+		cvtps2pi mm3, xmm5
+
 		mov esi, ptrResultadoIteration
-		movd[esi], xmm0
+		movd[esi], mm0
 
 		add esi, 4
-		movd[esi], xmm1
+		movd[esi], mm1
 
 		add esi, 4
-		movd[esi], xmm3
+		movd[esi], mm2
 
 		add esi, 4
-		movd[esi], xmm5
-
-		/*
-			buf[Y+0][X] buf[Y+0][X+1] buf[Y+0][X+2] buf[Y+0][X+3]
-			buf[Y+1][X] buf[Y+1][X+1] buf[Y+1][X+2] buf[Y+1][X+3]
-			buf[Y+2][X] buf[Y+2][X+1] buf[Y+2][X+2] buf[Y+2][X+3]
-			buf[Y+3][X] buf[Y+3][X+1] buf[Y+3][X+2] buf[Y+3][X+3]		
-		*/
-		push ecx
+		movd[esi], mm3
 
 		mov edi, ptrResultados
 
-		mov ecx, 4
+		mov writeLoop, 4
 	write:
 		mov esi, buf
 
@@ -336,11 +338,9 @@ void mandelbrot(char * buf, int X, int Y)
 
 		mov eax, 4
 		mul Y
-		mov edx, ecx
-		pop ecx	// cntY
-		add eax, ecx 
-		push ecx
-		mov ecx, edx
+		// cntY = outerLoop
+		add eax, outerLoop
+		dec eax
 		mul ebx
 
 		// buf + 3*(4*Y+cntY)*largura
@@ -349,7 +349,8 @@ void mandelbrot(char * buf, int X, int Y)
 		// 3*(4*X+cntX)
 		mov eax, 4
 		mul X
-		add eax, ecx
+		add eax, writeLoop
+		dec eax
 		mov ebx, eax
 		mov eax, 3
 		mul ebx
@@ -357,41 +358,51 @@ void mandelbrot(char * buf, int X, int Y)
 		// buf + 3*(4*Y+cntY)*largura + 3*(4*X+cntX)
 		add esi, eax
 
-		movd eax, [edi]
+		movd xmm0, [edi]
+		movd eax, xmm0
 		add edi, 4
 
 		cmp eax, 0	// eax == 0 -> Iteration != IterationMax
 		jne preigual
+		// Iteration != IterationMax
 		push edi
 		mov edi, ptrResultadoIteration
 		// we need to get the element on resultadoIteration
 		// relevant to the current cntX
 		mov eax, 4
-		mul ecx
+		mov ebx, writeLoop
+		dec ebx
+		mul ebx
 		add edi, eax
 
+		//	buf[3*(4*Y+cntY)*largura + 3*(4*X+cntX)   ] = ((IterationMax - Iteration) % 8) *  63;  /* Red */
 		mov eax, [edi]
 		cdq
 		mov ebx, 8
 		div ebx
+		mov eax, edx
 		mov ebx, 63
 		mul ebx
 		mov BYTE PTR [esi], al
 		inc esi
 
+		//	buf[3*(4*Y+cntY)*largura + 3*(4*X+cntX) + 1] = ((IterationMax - Iteration) % 4) * 127;  /* Green */
 		mov eax, [edi]
 		cdq
 		mov ebx, 4
 		div ebx
+		mov eax, edx
 		mov ebx, 127
 		mul ebx
 		mov BYTE PTR [esi], al
 		inc esi
 
+		//	buf[3*(4*Y+cntY)*largura + 3*(4*X+cntX) + 2] = ((IterationMax - Iteration) % 2) * 255;  /* Blue */
 		mov eax, [edi]
 		cdq
 		mov ebx, 2
 		div ebx
+		mov eax, edx
 		mov ebx, 255
 		mul ebx
 		mov BYTE PTR [esi], al
@@ -399,25 +410,18 @@ void mandelbrot(char * buf, int X, int Y)
 		pop edi
 
 		// loop write
-		dec ecx
-		cmp ecx, 0
+		dec writeLoop
+		cmp DWORD PTR writeLoop, 0
 		ja write
 		
-		pop ecx
 		// loop outer
-		dec ecx
-		cmp ecx, 0
+		dec outerLoop
+		cmp DWORD PTR outerLoop, 0
 		ja outer
 
-		//else
-		//{ /* exterior of Mandelbrot set = white */
-		//	buf[3*(4*Y+cntY)*largura + 3*(4*X+cntX)   ] = ((IterationMax - Iteration) % 8) *  63;  /* Red */
-		//	buf[3*(4*Y+cntY)*largura + 3*(4*X+cntX) + 1] = ((IterationMax - Iteration) % 4) * 127;  /* Green */
-		//	buf[3*(4*Y+cntY)*largura + 3*(4*X+cntX) + 2] = ((IterationMax - Iteration) % 2) * 255;  /* Blue */
-		//}
+		jmp fim
 
 	preigual:
-		push ecx
 		mov ecx, 3
 	igual:
 		//if (Iteration == IterationMax)
@@ -430,20 +434,19 @@ void mandelbrot(char * buf, int X, int Y)
 		inc esi
 		loop igual
 
-		pop ecx
 		// loop write
-		dec ecx
-		cmp ecx, 0
+		dec writeLoop
+		cmp DWORD PTR writeLoop, 0
 		ja write
 
-		pop ecx
-
 		// loop outer
-		dec ecx
-		cmp ecx, 0
+		dec outerLoop
+		cmp DWORD PTR outerLoop, 0
 		ja outer
 
+	fim:
 		pop edi
 		pop esi
 	}
+	_mm_empty();
 }
