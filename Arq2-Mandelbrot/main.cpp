@@ -198,6 +198,11 @@ void mandelbrot(char * buf, int X, int Y)
 		xorps xmm5, xmm5
 		cmpeqps xmm5, xmm0
 
+		mov esi, ptrZeros
+		movups xmm2, [esi]
+		xorps xmm2, xmm2
+		movups [esi], xmm2
+
 		// Iteration loop
 		mov ecx, iterMax
 	iter:
