@@ -238,7 +238,7 @@ void mandelbrot(char * buf, int X, int Y)
 		addps xmm5, xmm3	// xmm5 = Zy2 + Zx2
 		mov esi, ptrER2
 		movups xmm2, [esi]
-		cmpltps xmm5, xmm2	// parallel less than xmm5, ER2-> xmm5 < ER2 -> xmm5 = results (mask 0 = not less)
+		cmpnltps xmm5, xmm2	// parallel less than xmm5, ER2-> xmm5 < ER2 -> xmm5 = results (mask 0 = not less)
 
 		mov esi, ptrZeros
 		movups xmm2, [esi]
