@@ -67,17 +67,20 @@ void mandelbrot(char * buf, int X, int Y)
 	float PixelWidth = (CxMax - CxMin) / (float)largura;
 	float PixelHeight = (CyMax - CyMin) / (float)altura;
 
+	float zeros[4] = zero ;
+
 	float tmp = CyMin + 4 * Y*PixelHeight;
 	float Cy[4] = { tmp, tmp, tmp, tmp };
 	float widths[4] = { 0, PixelWidth, 2 * PixelWidth, 3 * PixelWidth };
 	float heights[4] = { PixelHeight, PixelHeight, PixelHeight, PixelHeight };
 	tmp = CxMin + 4 * X*PixelWidth;
 	float Cx[4] = { tmp, tmp, tmp, tmp };
-	float * ptrCy = NULL, *ptrHeights = NULL, *ptrCx = NULL, *ptrWidths = NULL;
+	float * ptrCy = NULL, *ptrHeights = NULL, *ptrCx = NULL, *ptrWidths = NULL, * ptrZeros = NULL;
 	ptrCy = Cy;
 	ptrHeights = heights;
 	ptrCx = Cx;
 	ptrWidths = widths;
+	ptrZeros = zeros;
 
 	// SSE
 	__asm
@@ -202,37 +205,31 @@ void mandelbrot(char * buf, int X, int Y)
 		mov esi, ptrDois
 		movups xmm2, [esi]
 		
-		andps xmm0, xmm5
 		mulps xmm1, xmm0	// xmm1 = Zx*Zy
 
-		andps xmm2, xmm5
 		mulps xmm1, xmm2	// xmm1 = 2*Zx*Zy
 
 		movups xmm2, xmm7
-		andps xmm2, xmm5
+		
 		addps xmm1, xmm2	// xmm1 = 2*Zx*Zy + Cy
 
 		// Zx = Zx2 - Zy2 + Cx;
 		movaps xmm0, xmm3	// xmm0 = Zx2
 
-		andps xmm4, xmm5
 		subps xmm0, xmm4	// xmm0 = Zx2 - Zy2
 		mov esi, ptrCx
 		movups xmm2, [esi]
 
-		andps xmm2, xmm5
 		addps xmm0, xmm2	// xmm0 = Zx2 - Zy2 + Cx
 
 		// Zx2 = Zx * Zx;
 		movaps xmm3, xmm0	// xmm3 = Zx
 
-		andps xmm0, xmm5
 		mulps xmm3, xmm0	// xmm3= Zx*Zx
 
 		// Zy2 = Zy * Zy;
 		movaps xmm4, xmm1	// xmm4 = Zy
 
-		andps xmm1, xmm5
 		mulps xmm4, xmm1	// xmm4 = Zy*Zy
 
 		// Zx2 + Zy2 < ER2;
@@ -241,7 +238,14 @@ void mandelbrot(char * buf, int X, int Y)
 		addps xmm5, xmm3	// xmm5 = Zy2 + Zx2
 		mov esi, ptrER2
 		movups xmm2, [esi]
-		cmpltps xmm5, xmm2	// parallel not less than xmm5, ER2-> xmm5 < ER2 -> xmm6 = results (mask 1 = not less)
+		cmpltps xmm5, xmm2	// parallel less than xmm5, ER2-> xmm5 < ER2 -> xmm5 = results (mask 0 = not less)
+
+		mov esi, ptrZeros
+		movups xmm2, [esi]
+		orps xmm2, xmm5
+		movups [esi], xmm2
+		movaps xmm5, xmm2
+
 		mov esi, ptrUm
 		movups xmm2, [esi]
 		andps xmm2, xmm5	// xmm5 & xmm2 = chooses which of the 4 floats will be incremented or not
