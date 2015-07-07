@@ -182,7 +182,7 @@ void mandelbrot(char * buf, int X, int Y)
 		movaps xmm7, xmm0
 		jmp zerar
 	zerarCy:
-		xorps xmm7, xmm7		
+		xorps xmm7, xmm7
 	zerar:
 		// zerar Zx
 		// Zx = 0.0;
@@ -261,80 +261,24 @@ void mandelbrot(char * buf, int X, int Y)
 		mov esi, ptrIterationMax
 		movups xmm5, [esi] // xmm5 = IterationMax
 		cmpeqps xmm5, xmm6 // parallel compare Iteration == IterationMax
-		
-		movaps xmm0, xmm5
-		movaps xmm1, xmm5
-		movaps xmm3, xmm5
-		/*
-			xmm0 = mascara do primeiro pixel ([31:  0])
-			xmm1 = mascara do segundo  pixel ([63: 32])
-			xmm3 = mascara do terceiro pixel ([95: 64])
-			xmm5 = mascara do quarto   pixel ([127:96])
-		*/
-		punpckldq xmm0, xmm0 // xmm0 = xmm0[31:0], xmm0[31:0], xmm0[63:32], xmm0[63:32]
-		punpckldq xmm0, xmm0 // xmm0 = xmm0[31:0], xmm0[31:0], xmm0[31:0], xmm0[31:0]
-
-		punpckldq xmm1, xmm1 // xmm1 = xmm1[31:0], xmm1[31:0], xmm1[63:32], xmm1[63:32]
-		punpckhdq xmm1, xmm1 // xmm1 = xmm1[63:32], xmm1[63:32], xmm1[63:32], xmm1[63:32]
-
-		punpckhdq xmm3, xmm3 // xmm3 = xmm3[95:64], xmm3[95:64], xmm3[127:96], xmm3[127:96]
-		punpckldq xmm3, xmm3 // xmm3 = xmm3[95:64], xmm3[95:64], xmm3[95:64], xmm3[95:64]
-
-		punpckhdq xmm5, xmm5 // xmm5 = xmm5[95:64], xmm5[95:64], xmm5[127:96], xmm5[127:96]
-		punpckhdq xmm5, xmm5 // xmm5 = xmm5[127:96], xmm5[127:96], xmm5[127:96], xmm5[127:96]
 
 		mov esi, ptrResultados
-		movd [esi], xmm0
-		
-		add esi, 4
-		movd [esi], xmm1
+		cvtps2dq xmm5, xmm5
 
-		add esi, 4
-		movd [esi], xmm3
-
-		add esi, 4
-		movd [esi], xmm5
+		movups [esi], xmm5
 
 		mov esi, ptrIterationMax
 		movups xmm0, [esi]
 
 		// parallel (IterationMax - Iteration)
 		subps xmm0, xmm6
-
-		movaps xmm1, xmm0
-		movaps xmm3, xmm0
-		movaps xmm5, xmm0
-
-		punpckldq xmm0, xmm0 
-		punpckldq xmm0, xmm0 
-
-		punpckldq xmm1, xmm1 
-		punpckhdq xmm1, xmm1 
-
-		punpckhdq xmm3, xmm3 
-		punpckldq xmm3, xmm3 
-
-		punpckhdq xmm5, xmm5 
-		punpckhdq xmm5, xmm5
-
-		cvtps2pi mm0, xmm0
-		cvtps2pi mm1, xmm1
-		cvtps2pi mm2, xmm3
-		cvtps2pi mm3, xmm5
+		cvtps2dq xmm0, xmm0
 
 		mov esi, ptrResultadoIteration
-		movd[esi], mm0
-
-		add esi, 4
-		movd[esi], mm1
-
-		add esi, 4
-		movd[esi], mm2
-
-		add esi, 4
-		movd[esi], mm3
+		movups [esi], xmm0
 
 		mov edi, ptrResultados
+
 
 		mov writeLoop, 4
 	write:
