@@ -7,7 +7,7 @@
 
 #define zero {0.0, 0.0, 0.0, 0.0}
 
-#define iterMax	4096
+#define iterMax	256
 #define iterMaxf	iterMax.0
 
 using namespace std;
