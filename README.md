@@ -13,7 +13,7 @@ Basta utilizar na linha de comando "mandelbrot.exe tamanho", ex. "mandelbrot.exe
 # Implementação
 O branch **simd** implementa o branch **master** utilizando *inline assembly* IA-32, com instruções vetoriais SSE, de modo a obter ganhos de performance na criação da imagem.
 
-Assim, foram feitos testes com diferentes tamanhos de imagem, de modo que o programa tivesse que calcular mais pixels, para que se pudesse compará-los. Os resultados obtidos (utilizando VC++) estão a seguir:
+Assim, foram feitos testes com diferentes tamanhos de imagem, de modo que o programa tivesse que calcular mais pixels, para que se pudesse compará-los. Os resultados obtidos (utilizando VC++) estão a seguir (em segundos):
 
   ![Resultados](https://cloud.githubusercontent.com/assets/1683404/9861832/312ff50c-5b0b-11e5-92e5-ae22f74d3518.PNG)
   
