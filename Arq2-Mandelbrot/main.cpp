@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
 
 	ofstream saida;
 
-	saida.open("I:\\appdata\\mandelbrot.ppm", ios::binary | ios::out);
+	saida.open(".\\mandelbrot.ppm", ios::binary | ios::out);
 
 
 	char * header = new char[20];
