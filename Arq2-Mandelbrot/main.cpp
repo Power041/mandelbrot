@@ -7,27 +7,32 @@
 
 #define zero {0.0, 0.0, 0.0, 0.0}
 
-#define iterMax	256
-#define iterMaxf	256.0
+#define iterMax	4096
+#define iterMaxf	iterMax.0
 
 using namespace std;
 
 void mandelbrot(char * buf, int X, int Y);
 
-const int altura = 16384;
-const int largura = 16384;
-
+int width = 4096, height = 4096;
 
 int main(int argc, char* argv[])
 {
+	if (argc < 2) {
+		printf("usage: mandelbrot.exe size");
+		return 0;
+	}
+
+	width = atoi(argv[1]);
+	height = width;
+
 	ofstream saida;
 
-	saida.open("I:\\appdata\\mandelbrot.ppm", ios::binary | ios::out);
+	saida.open(".\\mandelbrot.ppm", ios::binary | ios::out);
 
+	char * header = new char[21];
 
-	char * header = new char[20];
-
-	sprintf(header, "P6\n%d\n%d\n255\n", largura, altura);
+	sprintf(header, "P6\n%d\n%d\n255\n", width, height);
 
 	saida.write(header, strlen(header));
 
@@ -37,20 +42,14 @@ int main(int argc, char* argv[])
 	int iY, iX;
 
 	// buffer for all pixels, removing write overhead each iteration
-	char * color = new char[altura*largura * 3];
+	char * color = new char[height * width * 3];
 
-	mandelbrot(color, 0x200, 0);
-
-	for (iY = 0; iY<altura / 4; iY++)
-	{
-		for (iX = 0; iX<largura / 4; iX++)
-		{
+	for (iY = 0; iY<height / 4; iY++)
+		for (iX = 0; iX<width / 4; iX++)
 			mandelbrot(color, iX, iY);
-		}
-	}
 
 	/*write color to the file*/
-	saida.write(color, altura*largura * 3);
+	saida.write(color, height*width * 3);
 	saida.close();
 
 	return 0;
@@ -64,8 +63,8 @@ void mandelbrot(char * buf, int X, int Y)
 	const float CyMin = -2.0;
 	const float CyMax = 2.0;
 	/* */
-	float PixelWidth = (CxMax - CxMin) / (float)largura;
-	float PixelHeight = (CyMax - CyMin) / (float)altura;
+	float PixelWidth = (CxMax - CxMin) / (float)width;
+	float PixelHeight = (CyMax - CyMin) / (float)height;
 
 	float zeros[4] = zero ;
 
@@ -284,9 +283,9 @@ void mandelbrot(char * buf, int X, int Y)
 	write:
 		mov esi, buf
 
-		// 3*(4*Y+cntY)*largura -> 3*largura*(4*Y+cntY)
+		// 3*(4*Y+cntY)*width -> 3*width*(4*Y+cntY)
 		mov eax, 3
-		mul largura
+		mul width
 		mov ebx, eax
 
 		mov eax, 4
@@ -296,7 +295,7 @@ void mandelbrot(char * buf, int X, int Y)
 		dec eax
 		mul ebx
 
-		// buf + 3*(4*Y+cntY)*largura
+		// buf + 3*(4*Y+cntY)*width
 		add esi, eax
 
 		// 3*(4*X+cntX)
@@ -308,7 +307,7 @@ void mandelbrot(char * buf, int X, int Y)
 		mov eax, 3
 		mul ebx
 
-		// buf + 3*(4*Y+cntY)*largura + 3*(4*X+cntX)
+		// buf + 3*(4*Y+cntY)*width + 3*(4*X+cntX)
 		add esi, eax
 
 		movd xmm0, [edi]
@@ -328,7 +327,7 @@ void mandelbrot(char * buf, int X, int Y)
 		mul ebx
 		add edi, eax
 
-		//	buf[3*(4*Y+cntY)*largura + 3*(4*X+cntX)   ] = ((IterationMax - Iteration) % 8) *  63;  /* Red */
+		//	buf[3*(4*Y+cntY)*width + 3*(4*X+cntX)   ] = ((IterationMax - Iteration) % 8) *  63;  /* Red */
 		mov eax, [edi]
 		cdq
 		mov ebx, 8
@@ -339,7 +338,7 @@ void mandelbrot(char * buf, int X, int Y)
 		mov BYTE PTR [esi], al
 		inc esi
 
-		//	buf[3*(4*Y+cntY)*largura + 3*(4*X+cntX) + 1] = ((IterationMax - Iteration) % 4) * 127;  /* Green */
+		//	buf[3*(4*Y+cntY)*width + 3*(4*X+cntX) + 1] = ((IterationMax - Iteration) % 4) * 127;  /* Green */
 		mov eax, [edi]
 		cdq
 		mov ebx, 4
@@ -350,7 +349,7 @@ void mandelbrot(char * buf, int X, int Y)
 		mov BYTE PTR [esi], al
 		inc esi
 
-		//	buf[3*(4*Y+cntY)*largura + 3*(4*X+cntX) + 2] = ((IterationMax - Iteration) % 2) * 255;  /* Blue */
+		//	buf[3*(4*Y+cntY)*width + 3*(4*X+cntX) + 2] = ((IterationMax - Iteration) % 2) * 255;  /* Blue */
 		mov eax, [edi]
 		cdq
 		mov ebx, 2
@@ -379,9 +378,9 @@ void mandelbrot(char * buf, int X, int Y)
 	igual:
 		//if (Iteration == IterationMax)
 		//{ /*  interior of Mandelbrot set = black */
-		//	buf[3*(4*Y+cntY)*largura + 3*(4*X+cntX)    ] = 0;
-		//	buf[3*(4*Y+cntY)*largura + 3*(4*X+cntX) + 1] = 0;
-		//	buf[3*(4*Y+cntY)*largura + 3*(4*X+cntX) + 2] = 0;
+		//	buf[3*(4*Y+cntY)*width + 3*(4*X+cntX)    ] = 0;
+		//	buf[3*(4*Y+cntY)*width + 3*(4*X+cntX) + 1] = 0;
+		//	buf[3*(4*Y+cntY)*width + 3*(4*X+cntX) + 2] = 0;
 		//}
 		mov BYTE PTR [esi], 0
 		inc esi
